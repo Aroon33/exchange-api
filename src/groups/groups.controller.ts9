@@ -1,11 +1,11 @@
 import {
-  BadRequestException,
-  Body,
   Controller,
   Get,
   Post,
+  Body,
   Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';

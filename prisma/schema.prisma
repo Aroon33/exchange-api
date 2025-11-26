@@ -7,63 +7,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String
-  role      UserRole  @default(USER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          Int          @id @default(autoincrement())
+  email       String       @unique
+  password    String
+  name        String
+  role        UserRole     @default(USER)
+  systemStatus SystemStatus @default(RUNNING)  // ★ これを追加
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  groupId     Int?
+  kycRequests KycRequest[]
+  tickets     Ticket[]
+  transfers   Transfer[]
+  group       Group?       @relation(fields: [groupId], references: [id])
+  wallet      Wallet?
 
-  wallet       Wallet?
-  transfers    Transfer[]
-  kycRequests  KycRequest[]
-  tickets      Ticket[]
-  groupId      Int?
-  group        Group?        @relation(fields: [groupId], references: [id])
+  @@index([groupId], map: "User_groupId_fkey")
 }
 
 model Wallet {
-  id               Int      @id @default(autoincrement())
-  userId           Int      @unique
-  balanceTotal     Decimal  @default(0.0) @db.Decimal(18, 8)
-  balanceAvailable Decimal  @default(0.0) @db.Decimal(18, 8)
-  balanceLocked    Decimal  @default(0.0) @db.Decimal(18, 8)
-
-  user User @relation(fields: [userId], references: [id])
+  id               Int     @id @default(autoincrement())
+  userId           Int     @unique
+  balanceTotal     Decimal @default(0.00000000) @db.Decimal(18, 8)
+  balanceAvailable Decimal @default(0.00000000) @db.Decimal(18, 8)
+  balanceLocked    Decimal @default(0.00000000) @db.Decimal(18, 8)
+  user             User    @relation(fields: [userId], references: [id])
 }
 
 model Transfer {
   id        Int            @id @default(autoincrement())
   userId    Int
   type      TransferType
-  amount    Decimal        @default(0.0) @db.Decimal(18, 8)
+  amount    Decimal        @default(0.00000000) @db.Decimal(18, 8)
   status    TransferStatus @default(PENDING)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
+  @@index([userId], map: "Transfer_userId_fkey")
 }
 
 model Group {
   id    Int    @id @default(autoincrement())
-  name  String @unique   // "A" / "B" / "C" / "D" など
-
+  name  String @unique
   users User[]
 }
 
 model KycRequest {
-  id            Int       @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   userId        Int
-  status        Int       @default(0) // 0〜5 段階
+  status        Int      @default(0)
   documentFront String?
   documentBack  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
+  @@index([userId], map: "KycRequest_userId_fkey")
 }
 
 model Ticket {
@@ -73,25 +74,27 @@ model Ticket {
   status    TicketStatus    @default(OPEN)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id])
+  messages  TicketMessage[]
 
-  user     User            @relation(fields: [userId], references: [id])
-  messages TicketMessage[]
+  @@index([userId], map: "Ticket_userId_fkey")
 }
 
 model TicketMessage {
-  id        Int       @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   ticketId  Int
   sender    SenderType
   message   String
-  createdAt DateTime  @default(now())
+  createdAt DateTime   @default(now())
+  ticket    Ticket     @relation(fields: [ticketId], references: [id])
 
-  ticket Ticket @relation(fields: [ticketId], references: [id])
+  @@index([ticketId], map: "TicketMessage_ticketId_fkey")
 }
 
 model SystemTemplate {
   id        Int      @id @default(autoincrement())
   name      String
-  params    Json
+  params    String   @db.LongText
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -105,6 +108,13 @@ enum TransferType {
   DEPOSIT
   WITHDRAW
 }
+
+enum SystemStatus {
+  RUNNING
+  STOP_REQUESTED
+  STOPPED
+}
+
 
 enum TransferStatus {
   PENDING
@@ -121,5 +131,3 @@ enum SenderType {
   USER
   ADMIN
 }
-
-
