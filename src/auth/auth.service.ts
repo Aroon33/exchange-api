@@ -5,8 +5,9 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
+import { UserRole } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -18,9 +19,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  /**
-   * ユーザー新規登録
-   */
+  /** 新規登録 */
   async register(dto: RegisterDto) {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
@@ -31,11 +30,11 @@ export class AuthService {
 
     const user = await this.usersService.createUser({
       email: dto.email,
-      passwordHash: hash,
+      password: hash,
       name: dto.name,
+      role: UserRole.USER,
     });
 
-    // パスワードは返さない
     return {
       id: user.id,
       email: user.email,
@@ -44,9 +43,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * ログイン
-   */
+  /** ログイン */
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
@@ -62,37 +59,37 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      groupId: user.group?.id ?? undefined,
+
     };
 
-    // expiresIn は Config から取るが、型が少しうるさいので any キャストで逃がす
-    const accessExpiresIn =
-      this.config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m';
-    const refreshExpiresIn =
-      this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
+    // expires
+    const accessExpiresIn = this.config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m';
+    const refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
 
     const access = await this.jwtService.signAsync(payload, {
-      secret: this.config.get<string>('JWT_ACCESS_SECRET'),
-      expiresIn: accessExpiresIn as any,
-    });
+  secret: this.config.get('JWT_ACCESS_SECRET') as string,
+  expiresIn: accessExpiresIn as any,
+});
 
-    const refresh = await this.jwtService.signAsync(payload, {
-      secret: this.config.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: refreshExpiresIn as any,
-    });
+const refresh = await this.jwtService.signAsync(payload, {
+  secret: this.config.get('JWT_REFRESH_SECRET') as string,
+  expiresIn: refreshExpiresIn as any,
+});
 
-    const safeUser = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    };
+
+    
 
     return {
       access,
       refresh,
-      user: safeUser,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        groupId: user.group?.id,
+      },
     };
   }
 }
-
-

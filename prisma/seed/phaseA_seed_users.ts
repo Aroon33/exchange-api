@@ -32,6 +32,7 @@ async function main() {
     group = await prisma.group.create({
       data: {
         name: 'Default Group',
+        code: "group-a",
       },
     });
     console.log(`Group 作成: id=${group.id}, name=${group.name}`);

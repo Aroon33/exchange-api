@@ -1,15 +1,27 @@
 import { Module } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';   // ★追加
+
 import { AuthModule } from './auth/auth.module';
 import { WalletModule } from './wallet/wallet.module';
 import { DepositModule } from './deposit/deposit.module';
+import { SystemModule } from './system/system.module';
+import { TradesModule } from './trades/trades.module';
 import { WithdrawModule } from './withdraw/withdraw.module';
 import { KycModule } from './kyc/kyc.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { GroupsModule } from './groups/groups.module';
-import { SystemModule } from './system/system.module'; // ← ★追加するのはココ
+import { AdminModule } from './admin/admin.module';
+
+
+
 
 @Module({
   imports: [
+    // ⭐ ← ここに追加
+    MulterModule.register({
+      dest: './uploads/kyc',   // 保存先
+    }),
+
     AuthModule,
     WalletModule,
     DepositModule,
@@ -17,7 +29,9 @@ import { SystemModule } from './system/system.module'; // ← ★追加するの
     KycModule,
     TicketsModule,
     GroupsModule,
-    SystemModule, // ← ★ココに追加でOK
+    SystemModule,
+    TradesModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

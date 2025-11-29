@@ -6,45 +6,50 @@ import {
   Post,
   Req,
   UseGuards,
+  UploadedFiles,
+  UseInterceptors,
+  ForbiddenException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@prisma/client';
 
-class KycSubmitDto {
-  level: number;           // 1〜5
-  documentType?: string;   // 使うなら拡張用
-}
-
-class KycAdminSetStatusDto {
-  id: number;              // KycRequest id
-  status: string;          // "APPROVED" | "REJECTED" | "IN_REVIEW"
-  level?: number;          // 任意
-  addressStatus?: string;  // "OK" | "NG"
-  idStatus?: string;       // "OK" | "NG"
-  reason?: string;
-}
+import * as fs from 'fs';
+import * as path from 'path';
 
 @UseGuards(JwtAccessGuard)
 @Controller('kyc')
 export class KycController {
   constructor(private readonly prisma: PrismaService) {}
 
-  private assertAdmin(req: any) {
-    const user = req.user as any;
-    if (!user || user.role !== UserRole.ADMIN) {
-      throw new BadRequestException('Admin only');
+  /** Status 名を返す */
+  private statusLabel(level: number): string {
+    switch (level) {
+      case 0: return 'NONE';
+      case 1: return 'SUBMITTED';
+      case 2: return 'IN_REVIEW';
+      case 3: return 'APPROVED_LEVEL1';
+      case 4: return 'REJECTED';
+      case 5: return 'COMPLETED';
+      default: return 'UNKNOWN';
     }
   }
 
-  /**
-   * ユーザー側: 現在のKYCステータス取得
-   * GET /kyc/status
-   */
+  /** 管理者チェック */
+  private assertAdmin(req: any) {
+    if (!req.user || req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Admin only');
+    }
+  }
+
+  // ----------------------------------------------------------
+  // GET /kyc/status  （ユーザー側）
+  // ----------------------------------------------------------
   @Get('status')
   async getStatus(@Req() req: any) {
-    const user = req.user as any;
-    const userId = Number(user.sub);
+    const userId = Number(req.user.sub);
 
     const kyc = await this.prisma.kycRequest.findFirst({
       where: { userId },
@@ -59,121 +64,120 @@ export class KycController {
       };
     }
 
-    // status(Int) をそのまま level として返す
     return {
       exists: true,
       id: kyc.id,
-      userId: kyc.userId,
       level: kyc.status,
       status: this.statusLabel(kyc.status),
+      front: kyc.documentFront,
+      back: kyc.documentBack,
       createdAt: kyc.createdAt,
       updatedAt: kyc.updatedAt,
     };
   }
 
-  /**
-   * ユーザー側: KYC申請
-   * POST /kyc/submit
-   */
+  // ----------------------------------------------------------
+  // POST /kyc/submit  （ユーザー側: 画像アップロード）
+  // ----------------------------------------------------------
   @Post('submit')
-  async submit(@Req() req: any, @Body() body: KycSubmitDto) {
-    const user = req.user as any;
-    const userId = Number(user.sub);
+  @UseInterceptors(FilesInterceptor('files', 2))
+  async submit(
+    @Req() req: any,
+    @UploadedFiles() files: Array<Express.Multer.File>,
+  ) {
+    const userId = Number(req.user.sub);
 
-    const level = Number(body.level ?? 1);
-    if (isNaN(level) || level < 1 || level > 5) {
-      throw new BadRequestException('Invalid KYC level');
+    if (!files || files.length < 2) {
+      throw new BadRequestException('表面と裏面の画像を両方アップロードしてください。');
     }
+
+    const uploadDir = path.join(process.cwd(), 'uploads', 'kyc', String(userId));
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const front = files[0];
+    const back = files[1];
+
+    const frontName = `front_${Date.now()}.jpg`;
+    const backName = `back_${Date.now()}.jpg`;
+
+    const frontPath = path.join(uploadDir, frontName);
+    const backPath = path.join(uploadDir, backName);
+
+    fs.renameSync(front.path, frontPath);
+    fs.renameSync(back.path, backPath);
 
     const kyc = await this.prisma.kycRequest.create({
       data: {
         userId,
-        status: level,      // 0〜5段階として使う
-        documentFront: body.documentType ?? null,
+        status: 1, // SUBMITTED
+        documentFront: `/uploads/kyc/${userId}/${frontName}`,
+        documentBack: `/uploads/kyc/${userId}/${backName}`,
       },
     });
 
     return {
+      message: 'KYCを提出しました（審査中）。',
       id: kyc.id,
       userId: kyc.userId,
-      level: kyc.status,
-      status: this.statusLabel(kyc.status),
-      createdAt: kyc.createdAt,
-      updatedAt: kyc.updatedAt,
+      status: kyc.status,
+      front: kyc.documentFront,
+      back: kyc.documentBack,
     };
   }
 
-  /**
-   * 管理側: KYC一覧
-   * GET /kyc/admin/list
-   */
+  // ----------------------------------------------------------
+  // GET /kyc/admin/list  （管理者）
+  // ----------------------------------------------------------
   @Get('admin/list')
   async adminList(@Req() req: any) {
     this.assertAdmin(req);
 
     const items = await this.prisma.kycRequest.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
 
-    return items.map((k) => ({
+    return items.map(k => ({
       id: k.id,
       userId: k.userId,
+      name: k.user.name,
       email: k.user.email,
       level: k.status,
-      status: this.statusLabel(k.status),
+      statusText: this.statusLabel(k.status),
       createdAt: k.createdAt,
       updatedAt: k.updatedAt,
+      frontUrl: k.documentFront,
+      backUrl: k.documentBack,
     }));
   }
 
-  /**
-   * 管理側: KYCステータス更新
-   * POST /kyc/admin/set-status
-   */
-  /**
-   * 管理側: KYCステータス更新
-   * POST /kyc/admin/set-status
-   * body.id があればそのID、
-   * 無ければ「最新の KYC レコード」を更新
-   */
+  // ----------------------------------------------------------
+  // POST /kyc/admin/set-status  （管理者: 状態更新）
+  // ----------------------------------------------------------
   @Post('admin/set-status')
-  async adminSetStatus(@Req() req: any, @Body() body: KycAdminSetStatusDto) {
+  async adminSetStatus(
+    @Req() req: any,
+    @Body() body: { id: number; level: number },
+  ) {
     this.assertAdmin(req);
 
-    let kyc;
+    const id = Number(body.id);
+    const level = Number(body.level);
 
-    if (body.id) {
-      const id = Number(body.id);
-      if (!id || isNaN(id)) {
-        throw new BadRequestException('Invalid id');
-      }
-      kyc = await this.prisma.kycRequest.findUnique({ where: { id } });
-      if (!kyc) {
-        throw new BadRequestException('KycRequest not found');
-      }
-    } else {
-      // ★ id 指定が無い場合は「最新の申請」を拾う
-      kyc = await this.prisma.kycRequest.findFirst({
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!kyc) {
-        throw new BadRequestException('No KYC request found');
-      }
+    if (!id) throw new BadRequestException('Invalid KYC id');
+    if (isNaN(level) || level < 0 || level > 5) {
+      throw new BadRequestException('Invalid level (0〜5)');
     }
 
-    const newLevel =
-      typeof body.level === 'number' && !isNaN(body.level)
-        ? body.level
-        : kyc.status;
+    const kyc = await this.prisma.kycRequest.findUnique({ where: { id } });
+    if (!kyc) throw new BadRequestException('KYC record not found');
 
     const updated = await this.prisma.kycRequest.update({
-      where: { id: kyc.id },
+      where: { id },
       data: {
-        status: newLevel,
-        documentBack: body.reason ?? kyc.documentBack,
+        status: level,
       },
     });
 
@@ -181,28 +185,8 @@ export class KycController {
       id: updated.id,
       userId: updated.userId,
       level: updated.status,
-      status: this.statusLabel(updated.status),
-      createdAt: updated.createdAt,
+      statusText: this.statusLabel(updated.status),
       updatedAt: updated.updatedAt,
     };
-  }
-
-  private statusLabel(status: number): string {
-    switch (status) {
-      case 0:
-        return 'PENDING';
-      case 1:
-        return 'LEVEL1';
-      case 2:
-        return 'LEVEL2';
-      case 3:
-        return 'LEVEL3';
-      case 4:
-        return 'LEVEL4';
-      case 5:
-        return 'LEVEL5';
-      default:
-        return 'UNKNOWN';
-    }
   }
 }

@@ -7,19 +7,29 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { wallet: true, group: true },
-    });
-  }
+  return this.prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      password: true,      // ← ★これがないと絶対にログインできない
+      name: true,
+      role: true,
+      systemStatus: true,
+      wallet: true,
+      group: true,
+    },
+  });
+}
+
 
   async createUser(params: {
     email: string;
-    passwordHash: string;
+    password: string;
     name: string;
     role?: UserRole;
   }) {
-    const { email, passwordHash, name, role = UserRole.USER } = params;
+    const { email, password, name, role = UserRole.USER } = params;
 
     return this.prisma.$transaction(async (tx) => {
       // Prisma のトランザクションクライアントを any として扱って型エラーを避ける
@@ -28,7 +38,7 @@ export class UsersService {
       const user = await client.user.create({
         data: {
           email,
-          password: passwordHash,
+          password: password,
           name,
           role,
         },
