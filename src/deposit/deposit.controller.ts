@@ -11,6 +11,8 @@ import { PrismaService } from '../prisma/prisma.service';
   import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { TransferStatus, TransferType, UserRole } from '@prisma/client';
 
+import { ForbiddenException } from '@nestjs/common';
+
 // 入金申請 DTO（JPY / CRYPTO 共通）
 class DepositRequestDto {
   amount: string;        // 円金額（必須）

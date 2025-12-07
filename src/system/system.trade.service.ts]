@@ -1,0 +1,98 @@
+// src/system/system.trade.service.ts
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { SystemConfigService } from './system.config.service';
+
+@Injectable()
+export class SystemTradeService {
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
+
+  async priceMock(symbol: string) {
+    const base = {
+      BTCUSDT: 68000,
+      ETHUSDT: 3200,
+      SOLUSDT: 150,
+      XRPUSDT: 0.55,
+      BNBUSDT: 400,
+      DOGEUSDT: 0.18,
+      LTCUSDT: 80,
+      ADAUSDT: 0.48,
+      AVAXUSDT: 30,
+      DOTUSDT: 7,
+    }[symbol] || 1;
+
+    const change = (Math.random() - 0.5) * (base * 0.001);
+    return base + change;
+  }
+
+  async autoTrade() {
+    const config = await this.configService.getConfig();
+    const now = new Date();
+
+    for (const symbol of Object.keys(config)) {
+      const s = config[symbol];
+      if (s.status !== 'ACTIVE') continue;
+
+      const price = await this.priceMock(symbol);
+
+      const open = await this.prisma.trade.findFirst({
+        where: {
+          symbol,
+          closedAt: null,
+        },
+      });
+
+      if (!open) {
+        await this.prisma.trade.create({
+          data: {
+            userId: 8, // ★テスト用
+            symbol,
+            side: s.direction,
+            entryPrice: price,
+            size: s.size,
+            openedAt: now,
+          },
+        });
+        continue;
+      }
+
+      const diff = price - Number(open.entryPrice);
+
+      const pipsHit =
+        Math.abs(diff) >= s.pips;
+
+      const minutesPassed =
+        (now.getTime() - new Date(open.openedAt).getTime()) / 1000 / 60;
+
+      if (pipsHit || minutesPassed >= s.holdMinutes) {
+        const profit =
+          open.side === 'BUY'
+            ? (price - Number(open.entryPrice)) * open.size
+            : (Number(open.entryPrice) - price) * open.size;
+
+        await this.prisma.trade.update({
+          where: { id: open.id },
+          data: {
+            closePrice: price,
+            profit,
+            closedAt: now,
+          },
+        });
+
+        const w = await this.prisma.wallet.findUnique({
+          where: { userId: open.userId },
+        });
+
+        const newBal = Number(w.balanceAvailable) + profit;
+
+        await this.prisma.wallet.update({
+          where: { userId: open.userId },
+          data: { balanceAvailable: newBal, balanceTotal: newBal },
+        });
+      }
+    }
+  }
+}

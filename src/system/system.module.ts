@@ -1,9 +1,18 @@
+// src/system/system.module.ts
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { SystemController } from './system.controller';
+import { SystemConfigService } from './system.config.service';
+import { SystemTradeService } from './system.trade.service';
+import { SystemRateService } from './system.rate.service';
 
 @Module({
-  imports: [PrismaModule],
   controllers: [SystemController],
+  providers: [
+    PrismaService,
+    SystemConfigService,
+    SystemTradeService,
+    SystemRateService, // ★ 追加
+  ],
 })
 export class SystemModule {}

@@ -1,113 +1,134 @@
-import {
-  BadRequestException,
-  Body,
+// src/system/system.controller.ts
+import { 
   Controller,
   Get,
   Post,
+  Body,
+  Param,
   Req,
   UseGuards,
+  BadRequestException
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
-import { SystemStatus, UserRole } from '@prisma/client';
 
-class CloseCompleteDto {
-  userId: number;
-}
+import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
+import { SystemConfigService } from './system.config.service';
+import { SystemTradeService } from './system.trade.service';
 
 @UseGuards(JwtAccessGuard)
 @Controller('system')
 export class SystemController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly configService: SystemConfigService,
+    private readonly tradeService: SystemTradeService,
+  ) {}
 
-  /** ユーザー側: システム停止リクエスト */
+  /** -------------- settings.html 用：グループ別設定取得 -------------- */
+  @Get('config/:groupId')
+  getConfigByGroup(@Param('groupId') groupId: string) {
+    return this.configService.getConfigByGroup(Number(groupId));
+  }
+
+  /** -------------- settings.html 用：グループ別設定保存 -------------- */
+  @Post('config/:groupId')
+  updateConfigByGroup(
+    @Param('groupId') groupId: string,
+    @Body() body: any,
+  ) {
+    return this.configService.updateConfigByGroup(Number(groupId), body);
+  }
+
+  /** -------------- 管理画面：手動トレードループ実行 -------------- */
+  @Post('trade-loop')
+  async runLoop() {
+    await this.tradeService.autoTrade();
+    return { message: 'loop executed' };
+  }
+
+  /** -------------- system-trade.html 用：システム概要取得 -------------- */
+@Get('overview')
+async getOverview(@Req() req: any) {
+  const jwt = req.user;
+  const userId = jwt.sub;
+  const groupId = jwt.groupId;
+
+  // DBからユーザー取得
+  const dbUser = await this.tradeService.getUserById(userId);
+
+  // 念のため null チェック（型エラー防止）
+  const systemStatus = dbUser?.systemStatus ?? 'UNKNOWN';
+
+  // wallet を取得
+  const wallet = await this.tradeService.getWalletForUser(userId);
+
+  // グループ代表口座の open positions
+  const positions = await this.tradeService.getOpenPositionsByGroup(groupId);
+
+  return {
+    groupId,
+    systemStatus,          // ← null の場合でも安全
+    balanceTotal: wallet?.balanceTotal ?? 0,
+    positions,
+  };
+}
+// CLOSE GROUP (全銘柄)
+@Post('close-group/:groupId')
+async closeGroupAll(@Param('groupId') groupId: string) {
+  await this.tradeService.closePositionsForGroup(Number(groupId));
+  return { message: 'Group positions closed' };
+}
+
+// CLOSE GROUP (シンボル単位)
+@Post('close-group/:groupId/:symbol')
+async closeGroupSymbol(
+  @Param('groupId') groupId: string,
+  @Param('symbol')
+  symbol: string
+) {
+  await this.tradeService.closePositionsForGroup(Number(groupId), symbol);
+  return { message: `Group positions closed for ${symbol}` };
+}
+
+// CLOSE USER (全銘柄)
+@Post('close-user/:userId')
+async closeUserAll(@Param('userId') userId: string) {
+  await this.tradeService.closePositionsForUser(Number(userId));
+  return { message: 'User positions closed' };
+}
+
+// CLOSE USER (シンボル単位)
+@Post('close-user/:userId/:symbol')
+async closeUserSymbol(
+  @Param('userId') userId: string,
+  @Param('symbol') symbol: string
+) {
+  await this.tradeService.closePositionsForUser(Number(userId), symbol);
+  return { message: `User positions closed for ${symbol}` };
+}
+
+
+
+  /** -------------- system-trade.html：STOP リクエスト -------------- */
   @Post('stop')
-  async stop(@Req() req: any) {
-    const userId = Number(req.user.sub);
-
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: { systemStatus: SystemStatus.STOP_REQUESTED },
-    });
-
-    return updated;
+  async stopSystem(@Req() req: any) {
+    const userId = req.user.sub; // ★user.id ではなく sub
+    await this.configService.setUserSystemStatus(userId, 'STOP_REQUESTED');
+    return { message: 'STOP requested' };
   }
 
-  /** 管理側: 特定ユーザーの停止リクエスト（強制） */
-  @Post('admin/stop-request')
-  async adminStop(@Req() req: any, @Body() body: CloseCompleteDto) {
-    if (!req.user || req.user.role !== UserRole.ADMIN) {
-      throw new BadRequestException('Admin only');
-    }
-
-    const updated = await this.prisma.user.update({
-      where: { id: body.userId },
-      data: { systemStatus: SystemStatus.STOP_REQUESTED },
-    });
-
-    return updated;
-  }
-
-  /** バッチ側: 一括決済完了報告 → STOPPED へ */
-  @Post('close-complete')
-  async closeComplete(@Req() req: any, @Body() body: CloseCompleteDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: body.userId },
-    });
-    if (!user) throw new BadRequestException('User not found');
-
-    const updated = await this.prisma.user.update({
-      where: { id: body.userId },
-      data: { systemStatus: SystemStatus.STOPPED },
-    });
-
-    // 本来はポジションやウォレット更新もここで実施
-    return updated;
-  }
-
-  /** 管理側: システム再開（RUNNINGへ） */
+  /** -------------- system-trade.html：Admin ONLY → START -------------- */
   @Post('admin/start')
-  async adminStart(@Req() req: any, @Body() body: CloseCompleteDto) {
-    if (!req.user || req.user.role !== UserRole.ADMIN) {
+  async adminStart(@Req() req: any) {
+    const admin = req.user;
+
+    if (admin.role !== 'ADMIN') {
       throw new BadRequestException('Admin only');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: body.userId },
-    });
-    if (!user) throw new BadRequestException('User not found');
+    const userId = admin.sub;  // ★管理者自身のIDを RUNNING に戻す
+    await this.configService.setUserSystemStatus(userId, 'RUNNING');
 
-    const updated = await this.prisma.user.update({
-      where: { id: body.userId },
-      data: { systemStatus: SystemStatus.RUNNING },
-    });
-
-    return updated;
-  }
-
-  /** システム概要: groupId / systemStatus / balanceTotal / positions(仮) を返す */
-  @Get('overview')
-  async overview(@Req() req: any) {
-    const userId = Number(req.user.sub);
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) throw new BadRequestException('User not found');
-
-    const wallet = await this.prisma.wallet.findUnique({
-      where: { userId },
-    });
-
-    // ポジションは今は未実装なので空配列として返す（将来ここに実データを詰める）
-    const positions: any[] = [];
-
-    return {
-      userId,
-      groupId: user.groupId,
-      systemStatus: user.systemStatus,
-      balanceTotal: wallet?.balanceTotal ?? 0,
-      positions,
-    };
+    return { message: 'System restarted' };
   }
 }
+
+

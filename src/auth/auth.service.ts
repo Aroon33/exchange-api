@@ -60,6 +60,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       groupId: user.group?.id ?? undefined,
+      name: user.name,
 
     };
 

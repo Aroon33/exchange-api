@@ -11,14 +11,16 @@ import { KycModule } from './kyc/kyc.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { GroupsModule } from './groups/groups.module';
 import { AdminModule } from './admin/admin.module';
-
+import { PrismaModule } from './prisma/prisma.module';
+import { UserExtraModule } from './user-extra/user-extra.module';
 
 
 
 @Module({
   imports: [
-    // ⭐ ← ここに追加
-    MulterModule.register({
+    // ⭐ ← ここに追加    
+PrismaModule,    
+MulterModule.register({
       dest: './uploads/kyc',   // 保存先
     }),
 
@@ -32,6 +34,7 @@ import { AdminModule } from './admin/admin.module';
     SystemModule,
     TradesModule,
     AdminModule,
+    UserExtraModule,
   ],
 })
 export class AppModule {}

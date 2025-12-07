@@ -18,6 +18,8 @@ import { UserRole } from '@prisma/client';
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { Multer } from 'multer';
+
 
 @UseGuards(JwtAccessGuard)
 @Controller('kyc')
@@ -79,16 +81,19 @@ export class KycController {
   // ----------------------------------------------------------
   // POST /kyc/submit  （ユーザー側: 画像アップロード）
   // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // POST /kyc/submit  （ユーザー側: 画像アップロード）
+  // ----------------------------------------------------------
   @Post('submit')
   @UseInterceptors(FilesInterceptor('files', 2))
   async submit(
     @Req() req: any,
-    @UploadedFiles() files: Array<Express.Multer.File>,
+    @UploadedFiles() files: Multer.File[],
   ) {
     const userId = Number(req.user.sub);
 
     if (!files || files.length < 2) {
-      throw new BadRequestException('表面と裏面の画像を両方アップロードしてください。');
+      throw new BadRequestException('表面と裏面の画像を両方アップロードしてください');
     }
 
     const uploadDir = path.join(process.cwd(), 'uploads', 'kyc', String(userId));
