@@ -1,21 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveCryptoDto } from './dto/save-crypto.dto';
+import { UserCryptoAddress } from '@prisma/client';
 
 @Injectable()
 export class UserCryptoService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** すべて取得 */
-  async getList(userId: number) {
+  async getList(userId: number): Promise<UserCryptoAddress[]> {
     return this.prisma.userCryptoAddress.findMany({
       where: { userId },
     });
   }
 
   /** 複数アドレス保存（UPSERT） */
-  async saveList(userId: number, dto: SaveCryptoDto) {
-    const results = [];
+  async saveList(
+    userId: number,
+    dto: SaveCryptoDto
+  ): Promise<UserCryptoAddress[]> {
+
+    // ✅ 型を明示（超重要）
+    const results: UserCryptoAddress[] = [];
 
     for (const c of dto.addresses) {
       const saved = await this.prisma.userCryptoAddress.upsert({
@@ -37,7 +43,7 @@ export class UserCryptoService {
         },
       });
 
-      results.push(saved);
+      results.push(saved); // ✅ エラーなし
     }
 
     return results;

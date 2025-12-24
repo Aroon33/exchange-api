@@ -19,6 +19,7 @@ model UserProfile {
   phone       String
   user        User     @relation(fields: [userId], references: [id])
 }
+
 model UserBankAccount {
   id            Int      @id @default(autoincrement())
   userId        Int
@@ -49,9 +50,6 @@ model UserCryptoAddress {
   @@unique([userId, currency])
 }
 
-
-
-
 model User {
   id           Int          @id @default(autoincrement())
   email        String       @unique
@@ -70,8 +68,9 @@ model User {
   UserProfile  UserProfile?
   wallet       Wallet?
 
-  bankAccount      UserBankAccount?
-  cryptoAddresses  UserCryptoAddress[]
+  bankAccount            UserBankAccount?
+  cryptoAddresses        UserCryptoAddress[]
+  depositCryptoAddresses DepositCryptoAddress[]
 
   @@index([groupId], map: "User_groupId_fkey")
 }
@@ -164,6 +163,39 @@ model Ticket {
   @@index([userId], map: "Ticket_userId_fkey")
 }
 
+model DepositBankAccount {
+  id            Int                      @id @default(autoincrement())
+  bankName      String                   @map("bank_name")
+  branchName    String                   @map("branch_name")
+  accountType   String?                  @map("account_type")
+  accountNumber String                   @map("account_number")
+  accountHolder String                   @map("account_holder")
+  status        DepositBankAccountStatus
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+
+  @@map("deposit_bank_accounts")
+}
+
+enum DepositBankAccountStatus {
+  UNUSED
+  ACTIVE
+  CLOSED
+}
+
+model DepositCryptoAddress {
+  id        Int      @id @default(autoincrement())
+  currency  String   @db.VarChar(10) // BTC / ETH
+  address   String
+  memoTag   String?
+  userId    Int? // ← 将来用（割当ユーザー）
+  used      Boolean  @default(false) // 使用済みか
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
 model TicketMessage {
   id        Int        @id @default(autoincrement())
   ticketId  Int
@@ -192,9 +224,11 @@ enum SystemStatus {
 }
 
 enum TransferStatus {
-  PENDING
-  COMPLETED
-  CANCELED
+  PENDING // 申請中（ユーザー申請直後）
+  CONFIRMING // 確認中（アドレス送信済）
+  COMPLETED // 承認済（着金確認完了）
+  APPROVED
+  CANCELED // キャンセル
 }
 
 enum TicketStatus {

@@ -8,6 +8,9 @@ import { AdminUsersController } from './users.admin.controller';
 import { AdminTradesController } from './admin.trades.controller';
 import { AdminGroupsController } from './admin.groups.controller';
 import { AdminSystemController } from './admin.system.controller';
+import { AdminDepositBankAccountsController } from './admin-deposit-bank-accounts.controller';
+
+import { AdminDepositCryptoAddressesController } from './admin-deposit-crypto-addresses.controller';
 
 @Module({
   controllers: [
@@ -16,6 +19,8 @@ import { AdminSystemController } from './admin.system.controller';
     AdminTradesController,
     AdminGroupsController,
     AdminSystemController, // ← ★これがないと API が 404 になる
+    AdminDepositCryptoAddressesController, // ← ★追加
+    AdminDepositBankAccountsController,
   ],
   providers: [PrismaService],
 })

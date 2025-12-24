@@ -4,8 +4,6 @@ import {
   Controller,
   ForbiddenException,
   Get,
-  Param,
-  ParseIntPipe,
   Post,
   Req,
   UseGuards,
@@ -14,97 +12,98 @@ import {
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransferStatus, TransferType, UserRole } from '@prisma/client';
+import { WithdrawService } from './withdraw.service';
+
+/**
+ * 出金申請 DTO（JPY / CRYPTO 共通）
+ */
+type WithdrawRequestDto = {
+  amount?: string;          // JPY換算額
+  method?: 'JPY' | 'CRYPTO';
+  currency?: 'BTC' | 'ETH';
+  cryptoAmount?: string;    // CRYPTO時のみ
+};
 
 @UseGuards(JwtAccessGuard)
 @Controller('withdraw')
 export class WithdrawController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly withdrawService: WithdrawService,
+  ) {}
 
-  /** 出金申請（ユーザー） */
+  /* ===============================
+     ユーザー：出金申請
+     ※ 出金可否（KYC含む）は Service に委譲
+  =============================== */
   @Post('request')
   async request(
     @Req() req: any,
-    @Body() body: { amount: string }
+    @Body() body: WithdrawRequestDto,
   ) {
     const userId = Number(req.user.sub);
+    const method = body.method ?? 'JPY';
+
+    if (!['JPY', 'CRYPTO'].includes(method)) {
+      throw new BadRequestException('Invalid withdraw method');
+    }
+
+    /* ---------- JPY 出金 ---------- */
+    if (method === 'JPY') {
+      const amount = Number(body.amount);
+      if (!amount || amount <= 0) {
+        throw new BadRequestException('Invalid amount');
+      }
+
+      return this.withdrawService.requestWithdraw(userId, amount);
+    }
+
+    /* ---------- CRYPTO 出金 ---------- */
+    const cryptoAmount = Number(body.cryptoAmount);
+    const currency = body.currency;
     const amount = Number(body.amount);
 
+    if (!currency || !['BTC', 'ETH'].includes(currency)) {
+      throw new BadRequestException('Invalid crypto currency');
+    }
+
+    if (!cryptoAmount || cryptoAmount <= 0) {
+      throw new BadRequestException('Invalid cryptoAmount');
+    }
+
     if (!amount || amount <= 0) {
-      throw new BadRequestException('Invalid amount');
+      throw new BadRequestException('Invalid JPY amount');
     }
 
-    const wallet = await this.prisma.wallet.findUnique({
-      where: { userId },
-    });
-    if (!wallet) throw new BadRequestException('Wallet not found');
-
-    if (Number(wallet.balanceAvailable) < amount) {
-      throw new BadRequestException('Insufficient balance');
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const result = await tx.transfer.create({
-        data: {
-          userId,
-          type: TransferType.WITHDRAW,
-          amount: amount,
-          status: TransferStatus.PENDING,
-        },
-      });
-
-      await tx.wallet.update({
-        where: { userId },
-        data: {
-          balanceAvailable: { decrement: amount },
-          balanceLocked: { increment: amount },
-        },
-      });
-
-      return result;
-    });
+    // ※ 現仕様では JPY換算額でロック（Service側が最終判断）
+    return this.withdrawService.requestWithdraw(userId, amount);
   }
 
-  /** Admin: 出金承認 */
+  /* ===============================
+     Admin：出金承認
+  =============================== */
   @Post('approve')
-  async approve(
-    @Req() req: any,
-    @Body() body: { transferId: number },
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Admin only');
-    }
-
-    const id = Number(body.transferId);
-    if (!id) throw new BadRequestException('Invalid ID');
-
-    const tr = await this.prisma.transfer.findUnique({ where: { id } });
-    if (!tr || tr.type !== TransferType.WITHDRAW) {
-      throw new BadRequestException('Not a withdraw record');
-    }
-
-    if (tr.status !== TransferStatus.PENDING) {
-      throw new BadRequestException('Already processed');
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const res = await tx.transfer.update({
-        where: { id },
-        data: { status: TransferStatus.COMPLETED },
-      });
-
-      await tx.wallet.update({
-        where: { userId: tr.userId },
-        data: {
-          balanceLocked: { decrement: tr.amount },
-          balanceTotal: { decrement: tr.amount },
-        },
-      });
-
-      return res;
-    });
+async approve(
+  @Req() req: any,
+  @Body() body: { transferId: number },
+) {
+  if (req.user.role !== UserRole.ADMIN) {
+    throw new ForbiddenException('Admin only');
   }
 
-  /** Admin: 出金キャンセル */
+  const id = Number(body.transferId);
+  if (!id) throw new BadRequestException('Invalid ID');
+
+  return this.withdrawService.approveWithdraw(id);
+}
+
+
+  /* ===============================
+     Admin：出金キャンセル
+     - 出金キャンセル
+     - KYC status = 4
+     - チャット送信
+  =============================== */
   @Post('cancel')
   async cancel(
     @Req() req: any,
@@ -117,34 +116,12 @@ export class WithdrawController {
     const id = Number(body.transferId);
     if (!id) throw new BadRequestException('Invalid ID');
 
-    const tr = await this.prisma.transfer.findUnique({ where: { id } });
-    if (!tr || tr.type !== TransferType.WITHDRAW) {
-      throw new BadRequestException('Not a withdraw record');
-    }
-
-    if (tr.status !== TransferStatus.PENDING) {
-      throw new BadRequestException('Already processed');
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const res = await tx.transfer.update({
-        where: { id },
-        data: { status: TransferStatus.CANCELED },
-      });
-
-      await tx.wallet.update({
-        where: { userId: tr.userId },
-        data: {
-          balanceLocked: { decrement: tr.amount },
-          balanceAvailable: { increment: tr.amount },
-        },
-      });
-
-      return res;
-    });
+    return this.withdrawService.cancelWithdrawWithKycRollback(id);
   }
 
-  /** Admin: 全出金履歴（テーブル表示用） */
+  /* ===============================
+     Admin：全出金履歴
+  =============================== */
   @Get('all')
   async adminAll(@Req() req: any) {
     if (req.user.role !== UserRole.ADMIN) {
@@ -154,13 +131,13 @@ export class WithdrawController {
     return this.prisma.transfer.findMany({
       where: { type: TransferType.WITHDRAW },
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: true, // ★ 名前を表示させるために必須
-      },
+      include: { user: true },
     });
   }
 
-  /** Admin: PENDINGのみ取得（旧API互換） */
+  /* ===============================
+     Admin：PENDING 出金のみ
+  =============================== */
   @Get('pending')
   async pending(@Req() req: any) {
     if (req.user.role !== UserRole.ADMIN) {
@@ -173,9 +150,7 @@ export class WithdrawController {
         status: TransferStatus.PENDING,
       },
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
   }
 }
