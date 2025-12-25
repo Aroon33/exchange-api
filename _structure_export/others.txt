@@ -1,0 +1,69 @@
+Generated at: Fri Dec 26 02:48:47 AM JST 2025
+--------------------------------------------
+File     : app.controller.spec.ts
+Category : .
+Type     : OTHER
+
+
+Decorators:
+
+--------------------------------------------
+File     : auth/dto/login.dto.ts
+Category : auth/dto
+Type     : OTHER
+
+Class    : LoginDto
+
+Decorators:
+
+--------------------------------------------
+File     : auth/dto/register.dto.ts
+Category : auth/dto
+Type     : OTHER
+
+Class    : RegisterDto
+
+Decorators:
+
+--------------------------------------------
+File     : constants/kycMessages.ts
+Category : constants
+Type     : OTHER
+
+
+Decorators:
+
+--------------------------------------------
+File     : constants/transferMessages.ts
+Category : constants
+Type     : OTHER
+
+
+Decorators:
+
+--------------------------------------------
+File     : main.ts
+Category : .
+Type     : OTHER
+
+
+Decorators:
+
+--------------------------------------------
+File     : user-extra/dto/save-bank.dto.ts
+Category : user-extra/dto
+Type     : OTHER
+
+Class    : SaveBankDto
+
+Decorators:
+
+--------------------------------------------
+File     : user-extra/dto/save-crypto.dto.ts
+Category : user-extra/dto
+Type     : OTHER
+
+Class    : SaveCryptoDto
+
+Decorators:
+

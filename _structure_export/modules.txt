@@ -1,0 +1,151 @@
+Generated at: Fri Dec 26 02:48:47 AM JST 2025
+--------------------------------------------
+File     : admin/admin.module.ts
+Category : admin
+Type     : MODULE
+
+Class    : AdminModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : admin/auth/admin.auth.module.ts
+Category : admin/auth
+Type     : MODULE
+
+Class    : AdminAuthModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : app.module.ts
+Category : .
+Type     : MODULE
+
+Class    : AppModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : auth/auth.module.ts
+Category : auth
+Type     : MODULE
+
+Class    : AuthModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : deposit/deposit.module.ts
+Category : deposit
+Type     : MODULE
+
+Class    : DepositModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : groups/groups.module.ts
+Category : groups
+Type     : MODULE
+
+Class    : GroupsModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : kyc/kyc.module.ts
+Category : kyc
+Type     : MODULE
+
+Class    : KycModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : prisma/prisma.module.ts
+Category : prisma
+Type     : MODULE
+
+Class    : PrismaModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : system/system.module.ts
+Category : system
+Type     : MODULE
+
+Class    : SystemModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : tickets/tickets.module.ts
+Category : tickets
+Type     : MODULE
+
+Class    : TicketsModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : trades/trades.module.ts
+Category : trades
+Type     : MODULE
+
+Class    : TradesModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : user-extra/user-extra.module.ts
+Category : user-extra
+Type     : MODULE
+
+Class    : UserExtraModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : users/users.module.ts
+Category : users
+Type     : MODULE
+
+Class    : UsersModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : wallet/wallet.module.ts
+Category : wallet
+Type     : MODULE
+
+Class    : WalletModule
+
+Decorators:
+@Module({
+
+--------------------------------------------
+File     : withdraw/withdraw.module.ts
+Category : withdraw
+Type     : MODULE
+
+Class    : WithdrawModule
+
+Decorators:
+@Module({
+

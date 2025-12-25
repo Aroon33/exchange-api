@@ -1,0 +1,219 @@
+Generated at: Fri Dec 26 02:48:47 AM JST 2025
+--------------------------------------------
+File     : admin/admin.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminController
+
+Decorators:
+@Controller('admin')
+@UseGuards(JwtAccessGuard)
+
+--------------------------------------------
+File     : admin/admin-deposit-bank-accounts.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminDepositBankAccountsController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/deposit/bank-accounts')
+
+--------------------------------------------
+File     : admin/admin-deposit-crypto-addresses.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminDepositCryptoAddressesController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/deposit/crypto-addresses')
+
+--------------------------------------------
+File     : admin/admin.groups.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminGroupsController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/groups')
+
+--------------------------------------------
+File     : admin/admin.system.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminSystemController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/system')
+
+--------------------------------------------
+File     : admin/admin.trades.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminTradesController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/trades')
+
+--------------------------------------------
+File     : admin/auth/admin.auth.controller.ts
+Category : admin/auth
+Type     : CONTROLLER
+
+Class    : AdminAuthController
+
+Decorators:
+@Controller('admin/auth')
+
+--------------------------------------------
+File     : admin/users.admin.controller.ts
+Category : admin
+Type     : CONTROLLER
+
+Class    : AdminUsersController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('admin/users')
+
+--------------------------------------------
+File     : app.controller.ts
+Category : .
+Type     : CONTROLLER
+
+Class    : AppController
+
+Decorators:
+@Controller()
+
+--------------------------------------------
+File     : auth/auth.controller.ts
+Category : auth
+Type     : CONTROLLER
+
+Class    : AuthController
+
+Decorators:
+@Controller('auth')
+  @UseGuards(JwtAccessGuard)
+
+--------------------------------------------
+File     : deposit/deposit.controller.ts
+Category : deposit
+Type     : CONTROLLER
+
+Class    : DepositController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('deposit')
+
+--------------------------------------------
+File     : groups/groups.controller.ts
+Category : groups
+Type     : CONTROLLER
+
+Class    : GroupsController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('groups')
+
+--------------------------------------------
+File     : kyc/kyc.controller.ts
+Category : kyc
+Type     : CONTROLLER
+
+Class    : KycController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('kyc')
+
+--------------------------------------------
+File     : system/system.controller.ts
+Category : system
+Type     : CONTROLLER
+
+Class    : SystemController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('system')
+
+--------------------------------------------
+File     : tickets/tickets.controller.ts
+Category : tickets
+Type     : CONTROLLER
+
+Class    : TicketsController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('tickets')
+
+--------------------------------------------
+File     : trades/trades.controller.ts
+Category : trades
+Type     : CONTROLLER
+
+Class    : TradesController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('trades')
+
+--------------------------------------------
+File     : user-extra/user-bank.controller.ts
+Category : user-extra
+Type     : CONTROLLER
+
+Class    : UserBankController
+
+Decorators:
+@Controller('user/bank-account')
+@UseGuards(JwtAccessGuard)
+
+--------------------------------------------
+File     : user-extra/user-crypto.controller.ts
+Category : user-extra
+Type     : CONTROLLER
+
+Class    : UserCryptoController
+
+Decorators:
+@Controller('user/crypto')
+@UseGuards(JwtAccessGuard)
+
+--------------------------------------------
+File     : wallet/wallet.controller.ts
+Category : wallet
+Type     : CONTROLLER
+
+Class    : WalletController
+
+Decorators:
+@Controller('wallet')
+@UseGuards(JwtAccessGuard)
+
+--------------------------------------------
+File     : withdraw/withdraw.controller.ts
+Category : withdraw
+Type     : CONTROLLER
+
+Class    : WithdrawController
+
+Decorators:
+@UseGuards(JwtAccessGuard)
+@Controller('withdraw')
+

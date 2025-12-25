@@ -1,0 +1,181 @@
+Generated at: Fri Dec 26 02:48:47 AM JST 2025
+--------------------------------------------
+File     : app.service.ts
+Category : .
+Type     : SERVICE
+
+Class    : AppService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : auth/auth.service.ts
+Category : auth
+Type     : SERVICE
+
+Class    : AuthService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : auth/guards/jwt-access.guard.ts
+Category : auth/guards
+Type     : SERVICE
+
+Class    : JwtAccessGuard
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : auth/jwt-access.strategy.ts
+Category : auth
+Type     : SERVICE
+
+Class    : JwtAccessStrategy
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : auth/jwt-refresh.strategy.ts
+Category : auth
+Type     : SERVICE
+
+Class    : JwtRefreshStrategy
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : deposit/deposit.service.ts
+Category : deposit
+Type     : SERVICE
+
+Class    : DepositService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : groups/groups.service.ts
+Category : groups
+Type     : SERVICE
+
+Class    : GroupsService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : kyc/kyc.service.ts
+Category : kyc
+Type     : SERVICE
+
+Class    : KycService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : prisma/prisma.service.ts
+Category : prisma
+Type     : SERVICE
+
+Class    : PrismaService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : system/system.config.service.ts
+Category : system
+Type     : SERVICE
+
+Class    : SystemConfigService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : system/system.rate.service.ts
+Category : system
+Type     : SERVICE
+
+Class    : SystemRateService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : system/system.trade.service.ts
+Category : system
+Type     : SERVICE
+
+Class    : SystemTradeService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : tickets/tickets.service.ts
+Category : tickets
+Type     : SERVICE
+
+Class    : TicketsService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : user-extra/user-bank.service.ts
+Category : user-extra
+Type     : SERVICE
+
+Class    : UserBankService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : user-extra/user-crypto.service.ts
+Category : user-extra
+Type     : SERVICE
+
+Class    : UserCryptoService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : users/users.service.ts
+Category : users
+Type     : SERVICE
+
+Class    : UsersService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : wallet/wallet.service.ts
+Category : wallet
+Type     : SERVICE
+
+Class    : WalletService
+
+Decorators:
+@Injectable()
+
+--------------------------------------------
+File     : withdraw/withdraw.service.ts
+Category : withdraw
+Type     : SERVICE
+
+Class    : WithdrawService
+
+Decorators:
+@Injectable()
+
